@@ -1,0 +1,60 @@
+version: "3.7"
+services:
+  app:
+    build:
+      args:
+        user: ciya-prod
+        uid: 1000
+      context: ./
+      dockerfile: ./Docker/Dockerfile
+    image: payments-service
+    container_name: payments-service
+    restart: unless-stopped
+    working_dir: /var/www/
+    volumes:
+      - ./vendor:/var/www/vendor
+
+    networks:
+      - default
+      - backend
+
+
+  io.ciya.payments:
+    image: nginx:alpine
+    container_name: payments-service-nginx
+    restart: unless-stopped
+    #ports:
+      #- 2584:80
+    volumes:
+      - ./:/var/www
+      - ./Docker/nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - default
+      - proxynet
+  db:
+    image: mysql
+    container_name: payments-service-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+    
+    networks:
+      - default
+  redis:
+      image: redis:alpine
+      container_name: payments-service-redis
+      restart: unless-stopped
+      command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD}"
+      networks:
+       - default    
+
+networks:
+  proxynet:
+    external: true
+    name: proxy_network
+  backend:
+    external: true
+    name: backend_network  

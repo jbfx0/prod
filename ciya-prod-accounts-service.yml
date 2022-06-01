@@ -1,0 +1,68 @@
+version: "3.7"
+services:
+  app:
+    build:
+      args:
+        user: ciya-prod
+        uid: 1000
+      context: ./
+      dockerfile: ./Docker/Dockerfile
+    image: accounts-service
+    container_name: accounts-service
+    restart: unless-stopped
+    working_dir: /var/www/
+    volumes:
+      - ./storage/app:/var/www/storage/app
+      - ./vendor:/var/www/vendor
+
+    networks:
+      - default
+      - backend
+
+
+  io.ciya.accounts:
+    image: nginx:alpine
+    container_name: accounts-service-nginx
+    restart: unless-stopped
+    ports:
+      - 2580:80 
+    volumes:
+      - ./:/var/www/
+      - ./Docker/nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - default
+      - proxynet
+
+  db:
+    image: mysql
+    container_name: accounts-service-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+    
+    networks:
+      - default
+  redis:
+      image: redis:alpine
+      container_name: accounts-service-redis
+      restart: unless-stopped
+      command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD}"
+      #ports:
+        #- 6379
+      networks:
+       - default
+    
+
+networks:
+  backend:
+    driver: bridge
+    internal: true
+    name: backend_network
+
+  proxynet:
+    driver: bridge
+    internal: true
+    name: proxy_network
